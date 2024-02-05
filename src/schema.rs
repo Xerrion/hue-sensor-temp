@@ -23,7 +23,4 @@ diesel::table! {
 
 diesel::joinable!(temperatures -> sensors (sensor_id));
 
-diesel::allow_tables_to_appear_in_same_query!(
-    sensors,
-    temperatures,
-);
+diesel::allow_tables_to_appear_in_same_query!(sensors, temperatures,);

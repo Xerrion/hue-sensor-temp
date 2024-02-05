@@ -19,7 +19,9 @@ pub fn establish_connection() -> SqliteConnection {
     let full_os_path = OsStr::new(&full_path);
 
     // Create dirs
-    let _ = std::fs::create_dir_all(database_base.clone());
+    if !database_base.exists() {
+        std::fs::create_dir_all(database_base.clone()).unwrap();
+    }
 
     SqliteConnection::establish(full_os_path.to_str().unwrap())
         .unwrap_or_else(|_| panic!("Error connecting to {}", full_os_path.to_str().unwrap()))

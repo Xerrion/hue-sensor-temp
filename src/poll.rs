@@ -6,6 +6,7 @@ use tokio::time::{interval, Duration};
 
 // Adjust the path according to your project structure
 use crate::sensor::SensorDetails;
+use futures::stream::{self, StreamExt};
 
 #[derive(Debug, Clone)]
 pub struct Poller {
@@ -40,7 +41,7 @@ impl Poller {
         loop {
             interval_timer.tick().await;
             println!("Creating sensors {}", Local::now());
-            self.create_sensor().await;
+            self.create_sensor().await.expect("Sensor creation failed");
             let next_poll = Local::now() + interval_timer.period();
             println!("Next sensor creation at {}", next_poll);
         }
@@ -53,7 +54,9 @@ impl Poller {
             interval_timer.tick().await;
 
             println!("Polling temperature {}", Local::now());
-            self.create_temperature().await;
+            self.create_temperature()
+                .await
+                .expect("Temperature creation failed");
             let next_poll = Local::now() + interval_timer.period();
             println!("Next temperature poll at {}", next_poll);
         }
@@ -61,26 +64,37 @@ impl Poller {
 
     async fn poll_sensors(&mut self) {
         let mut sensor_details_guard = self.sensors.lock().await;
-        sensor_details_guard.get_sensors().await.unwrap();
+        if let Err(e) = sensor_details_guard.get_sensors().await {
+            eprintln!("Error polling sensors: {}", e);
+            return;
+        }
     }
 
-    async fn create_sensor(&mut self) {
+    async fn create_sensor(&self) -> Result<(), Box<dyn std::error::Error>> {
         let mut sensor_details_guard = self.sensors.lock().await;
-        let sensors = sensor_details_guard.get_sensors().await.unwrap();
+        let sensors = sensor_details_guard.get_sensors().await;
 
-        sensors
-            .iter()
-            .for_each(|(_, sensor)| sensor.create_sensor());
+        stream::iter(sensors.unwrap())
+            .for_each_concurrent(None, |(_, sensor)| async move {
+                if let Err(e) = sensor.create_sensor() {
+                    eprintln!("Error creating sensor: {}", e);
+                }
+            })
+            .await;
+        Ok(())
     }
 
-    async fn create_temperature(&mut self) {
+    async fn create_temperature(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let mut sensor_details_guard = self.sensors.lock().await;
-        let sensors = sensor_details_guard.get_sensors().await.unwrap();
+        let sensors = sensor_details_guard.get_sensors().await;
 
-        sensors.iter().for_each(|(id, sensor)| {
-            if sensor.state.temperature.is_some() {
-                sensor.create_temperature(id.parse::<i32>().unwrap());
-            }
-        });
+        stream::iter(sensors.unwrap())
+            .for_each_concurrent(None, |(id, sensor)| async move {
+                if let Err(e) = sensor.create_temperature(id.parse().unwrap()) {
+                    eprintln!("Error creating temperature: {}", e);
+                }
+            })
+            .await;
+        Ok(())
     }
 }
