@@ -1,0 +1,5 @@
+[build]
+jobs = 16
+
+[profile.release]
+rustflags = ["-Zlocation-detail=none"]
