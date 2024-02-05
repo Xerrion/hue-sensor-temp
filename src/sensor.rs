@@ -45,7 +45,10 @@ impl SensorDetails {
 
 impl Sensor {
     pub fn get_temperature(&self) -> Option<f32> {
-        self.state.temperature
+        match self.state.temperature {
+            Some(temperature) => Some(temperature / 100.0),
+            None => None,
+        }
     }
 
     pub fn get_lastupdated(&self) -> NaiveDateTime {
