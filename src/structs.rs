@@ -3,28 +3,6 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Sensor {
-    pub state: State,
-    pub config: Config,
-    pub name: String,
-    #[serde(rename = "type")]
-    pub sensor_type: String,
-    pub modelid: String,
-    pub manufacturername: String,
-    pub swversion: String,
-    pub uniqueid: Option<String>,
-    pub recycle: Option<bool>,
-    #[serde(flatten)]
-    pub swupdate: Option<SoftwareUpdate>,
-    #[serde(flatten)]
-    pub productname: Option<String>,
-    #[serde(flatten)]
-    pub diversityid: Option<String>,
-    #[serde(flatten)]
-    pub capabilities: Option<Capabilities>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct State {
     pub daylight: Option<bool>,
     pub lastupdated: String,
@@ -81,9 +59,30 @@ pub struct Event {
     pub rotaryevent: Option<i32>,
 }
 #[derive(Debug, Clone)]
-pub(crate) struct SensorDetails {
+pub(crate) struct HueBridge {
     pub(crate) url: String,
     pub(crate) username: String,
     pub(crate) sensors: Option<Sensors>,
 }
-pub type Sensors = HashMap<String, Sensor>;
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct HueSensor {
+    pub state: State,
+    pub config: Config,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub sensor_type: String,
+    pub modelid: String,
+    pub manufacturername: String,
+    pub swversion: String,
+    pub uniqueid: Option<String>,
+    pub recycle: Option<bool>,
+    #[serde(flatten)]
+    pub swupdate: Option<SoftwareUpdate>,
+    #[serde(flatten)]
+    pub productname: Option<String>,
+    #[serde(flatten)]
+    pub diversityid: Option<String>,
+    #[serde(flatten)]
+    pub capabilities: Option<Capabilities>,
+}
+pub type Sensors = HashMap<i32, HueSensor>;

@@ -7,7 +7,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use tokio::sync::Mutex;
 
 use poll::Poller;
-use structs::SensorDetails;
+use structs::HueBridge;
 
 mod crud;
 mod database;
@@ -35,10 +35,10 @@ async fn main() {
     let hue_url = env::var("HUE_URL").expect("HUE_URL must be set.");
     let hue_username = env::var("HUE_USERNAME").expect("API_KEY must be set.");
 
-    let sensor_details = SensorDetails::new(hue_url, hue_username);
-    let sensor_details = Arc::new(Mutex::new(sensor_details));
+    let hue_bridge = HueBridge::new(hue_url, hue_username);
+    let mutex_hue_bridge = Arc::new(Mutex::new(hue_bridge));
 
-    let poller = Poller::new(sensor_details.clone(), 30); // Poll every 60 seconds
+    let poller = Poller::new(mutex_hue_bridge.clone(), 30); // Poll every 60 seconds
 
     let polling_task = tokio::spawn({
         let mut poller = poller.clone();

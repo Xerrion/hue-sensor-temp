@@ -1,21 +1,20 @@
 use std::sync::Arc;
 
 use chrono::Local;
+use futures::stream::{self, StreamExt};
 use tokio::sync::Mutex;
 use tokio::time::{interval, Duration};
 
-// Adjust the path according to your project structure
-use crate::structs::SensorDetails;
-use futures::stream::{self, StreamExt};
+use crate::structs::HueBridge;
 
 #[derive(Debug, Clone)]
 pub struct Poller {
-    sensors: Arc<Mutex<SensorDetails>>,
+    sensors: Arc<Mutex<HueBridge>>,
     interval_seconds: u64,
 }
 
 impl Poller {
-    pub fn new(sensors: Arc<Mutex<SensorDetails>>, interval_seconds: u64) -> Self {
+    pub fn new(sensors: Arc<Mutex<HueBridge>>, interval_seconds: u64) -> Self {
         Poller {
             sensors,
             interval_seconds,
@@ -100,7 +99,7 @@ impl Poller {
 
         stream::iter(sensors.unwrap())
             .for_each_concurrent(None, |(id, sensor)| async move {
-                if let Err(e) = sensor.create_temperature(id.parse().unwrap()) {
+                if let Err(e) = sensor.create_temperature(id) {
                     eprintln!("Error creating temperature: {}", e);
                 }
             })

@@ -1,16 +1,17 @@
 use diesel::dsl::exists;
 use diesel::result::Error;
-use diesel::Connection;
-use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
+use diesel::{insert_into, Connection};
+use diesel::{select, ExpressionMethods};
 use diesel::{BoolExpressionMethods, SqliteConnection};
 
 use crate::schema::sensors::dsl::sensors;
 use crate::schema::sensors::{name, uniqueid};
+use crate::schema::temperatures::dsl::temperatures;
 
 pub fn create_sensor(
-    conn: &mut SqliteConnection,
+    mut conn: SqliteConnection,
     new_sensor_name: String,
     sensor_type: String,
     modelid: String,
@@ -18,16 +19,15 @@ pub fn create_sensor(
     swversion: String,
     new_sensor_uniqueid: Option<String>,
 ) -> Result<(), Error> {
-    // Adjust the closure to use the connection provided by the transaction method
     conn.transaction::<_, Error, _>(|conn_inside_transaction| {
-        let sensor_exists = diesel::select(exists(
+        let sensor_exists = select(exists(
             sensors.filter(
                 uniqueid
                     .eq(&new_sensor_uniqueid)
                     .or(name.eq(&new_sensor_name)),
             ),
         ))
-        .get_result::<bool>(conn_inside_transaction)?; // Use the connection provided to the closure
+        .get_result::<bool>(conn_inside_transaction)?;
 
         if !sensor_exists {
             let new_sensor = crate::models::Sensor {
@@ -40,9 +40,9 @@ pub fn create_sensor(
                 uniqueid: new_sensor_uniqueid,
             };
             println!("Creating sensor: {:?}", new_sensor);
-            diesel::insert_into(sensors)
+            insert_into(sensors)
                 .values(&new_sensor)
-                .execute(conn_inside_transaction)?; // Use the connection provided to the closure
+                .execute(conn_inside_transaction)?;
         }
 
         Ok(())
@@ -50,7 +50,7 @@ pub fn create_sensor(
 }
 
 pub fn create_temperature(
-    conn: &mut SqliteConnection,
+    mut conn: SqliteConnection,
     temperature: f32,
     sensor_id: i32,
     updated: chrono::NaiveDateTime,
@@ -58,18 +58,25 @@ pub fn create_temperature(
     use crate::schema::temperatures;
 
     conn.transaction::<_, Error, _>(|conn_inside_transaction| {
-        let new_temperature = crate::models::Temperature {
-            id: None,
-            temperature,
-            sensor_id,
-            updated,
-        };
+        let temp_exists = select(exists(
+            temperatures.filter(temperatures::updated.eq(updated)),
+        ))
+        .first::<bool>(conn_inside_transaction)?;
 
-        println!("Creating temperature: {:?}", new_temperature);
-        diesel::insert_into(temperatures::table)
-            .values(&new_temperature)
-            .execute(conn_inside_transaction)
-            .expect("Error saving new temperature");
+        if !temp_exists {
+            let new_temperature = crate::models::Temperature {
+                id: None,
+                temperature,
+                sensor_id,
+                updated,
+            };
+            println!("Creating temperature: {:?}", new_temperature);
+            insert_into(temperatures::table)
+                .values(&new_temperature)
+                .execute(conn_inside_transaction)
+                .expect("Error saving new temperature");
+        }
+
         Ok(())
     })
 }
