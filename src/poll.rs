@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 use tokio::time::{interval, Duration};
 
 // Adjust the path according to your project structure
-use crate::sensor::SensorDetails;
+use crate::structs::SensorDetails;
 use futures::stream::{self, StreamExt};
 
 #[derive(Debug, Clone)]
@@ -19,6 +19,14 @@ impl Poller {
         Poller {
             sensors,
             interval_seconds,
+        }
+    }
+    fn seconds_to_add_for_hour(&self) -> u64 {
+        let hour_in_seconds: u64 = 3600;
+        if self.interval_seconds >= hour_in_seconds {
+            0
+        } else {
+            hour_in_seconds - self.interval_seconds
         }
     }
 
@@ -36,7 +44,9 @@ impl Poller {
     }
 
     pub async fn start_sensor_creation(&mut self) {
-        let mut interval_timer = interval(Duration::from_secs(self.interval_seconds));
+        let mut interval_timer = interval(Duration::from_secs(
+            self.interval_seconds + self.seconds_to_add_for_hour(),
+        ));
 
         loop {
             interval_timer.tick().await;
@@ -48,7 +58,7 @@ impl Poller {
     }
 
     pub async fn start_temperature_polling(&mut self) {
-        let mut interval_timer = interval(Duration::from_secs(self.interval_seconds + 60));
+        let mut interval_timer = interval(Duration::from_secs(self.interval_seconds));
 
         loop {
             interval_timer.tick().await;

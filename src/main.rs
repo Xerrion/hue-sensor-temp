@@ -7,8 +7,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use tokio::sync::Mutex;
 
 use poll::Poller;
-
-use crate::sensor::SensorDetails;
+use structs::SensorDetails;
 
 mod crud;
 mod database;

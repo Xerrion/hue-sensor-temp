@@ -1,13 +1,8 @@
 use std::collections::HashMap;
 
-use chrono::NaiveDateTime;
-use diesel::result::Error;
 use serde::{Deserialize, Serialize};
 
-use crate::crud::{create_sensor, create_temperature};
-use crate::database;
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Sensor {
     pub state: State,
     pub config: Config,
@@ -27,47 +22,6 @@ pub struct Sensor {
     pub diversityid: Option<String>,
     #[serde(flatten)]
     pub capabilities: Option<Capabilities>,
-}
-
-impl Sensor {
-    pub fn get_temperature(&self) -> Option<f32> {
-        self.state.temperature
-    }
-
-    pub fn get_lastupdated(&self) -> NaiveDateTime {
-        NaiveDateTime::parse_from_str(&self.state.lastupdated, "%Y-%m-%dT%H:%M:%S").unwrap()
-    }
-
-    pub fn create_sensor(&self) -> Result<(), Error> {
-        let mut conn = database::establish_connection();
-        match create_sensor(
-            &mut conn,
-            self.name.clone(),
-            self.sensor_type.clone(),
-            self.modelid.clone(),
-            self.manufacturername.clone(),
-            self.swversion.clone(),
-            self.uniqueid.clone(),
-        ) {
-            Ok(_) => Ok(()),
-            Err(_) => Ok(()),
-        }
-    }
-
-    pub fn create_temperature(&self, sensor_id: i32) -> Result<(), Box<dyn std::error::Error>> {
-        // Only proceed if there is a temperature value available
-        if let Some(temperature) = self.get_temperature() {
-            let mut conn = database::establish_connection();
-
-            // Attempt to create the temperature record
-            match create_temperature(&mut conn, temperature, sensor_id, self.get_lastupdated()) {
-                Ok(_) => Ok(()),
-                Err(_) => Ok(()),
-            }
-        } else {
-            Ok(())
-        }
-    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -126,5 +80,10 @@ pub struct Event {
     pub eventtype: String,
     pub rotaryevent: Option<i32>,
 }
-
+#[derive(Debug, Clone)]
+pub(crate) struct SensorDetails {
+    pub(crate) url: String,
+    pub(crate) username: String,
+    pub(crate) sensors: Option<Sensors>,
+}
 pub type Sensors = HashMap<String, Sensor>;
